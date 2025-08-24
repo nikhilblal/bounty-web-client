@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { db, getDocs, collection } from '../../firebase';
 import { useAuth } from '../context/AuthContext';
 
@@ -13,6 +13,7 @@ interface LeaderboardUser {
   tasksPosted: number;
   pointsStacked: number;
   tasksStacked: number;
+  totalContribution?: number;
 }
 
 export default function Leaderboard() {
@@ -22,11 +23,7 @@ export default function Leaderboard() {
   const [timeframe, setTimeframe] = useState<'all' | 'month' | 'week'>('all');
   const [sortBy, setSortBy] = useState<'total' | 'earned' | 'stacked'>('total');
 
-  useEffect(() => {
-    fetchLeaderboard();
-  }, [timeframe, sortBy]);
-
-  const fetchLeaderboard = async () => {
+  const fetchLeaderboard = useCallback(async () => {
     try {
       const tasksSnapshot = await getDocs(collection(db, 'tasks'));
       const tasks = tasksSnapshot.docs.map(doc => ({
@@ -37,7 +34,22 @@ export default function Leaderboard() {
       // Calculate user statistics
       const userStats: { [userId: string]: LeaderboardUser } = {};
 
-      tasks.forEach((task: any) => {
+      tasks.forEach((task: {
+        id: string;
+        posterId?: string;
+        posterName?: string;
+        posterAvatar?: string;
+        doerId?: string;
+        doerName?: string;
+        status?: string;
+        bounty?: number;
+        bountyContributors?: Array<{
+          userId: string;
+          userName: string;
+          userAvatar?: string;
+          amount: number;
+        }>;
+      }) => {
         // Initialize poster if not exists
         if (task.posterId && !userStats[task.posterId]) {
           userStats[task.posterId] = {
@@ -79,7 +91,7 @@ export default function Leaderboard() {
 
         // Count stacking contributions
         if (task.bountyContributors) {
-          task.bountyContributors.forEach((contributor: any) => {
+          task.bountyContributors.forEach((contributor) => {
             if (!userStats[contributor.userId]) {
               userStats[contributor.userId] = {
                 userId: contributor.userId,
@@ -122,7 +134,11 @@ export default function Leaderboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [sortBy]);
+
+  useEffect(() => {
+    fetchLeaderboard();
+  }, [fetchLeaderboard, timeframe]);
 
   const getRankBadge = (rank: number) => {
     switch (rank) {
