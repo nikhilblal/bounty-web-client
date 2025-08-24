@@ -214,9 +214,9 @@ export default function BountyBoard() {
         </div>
       </div>
 
-      <div className="grid gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
         {filteredTasks.map(task => (
-          <div key={task.id} className="bg-white border rounded-lg overflow-hidden shadow-sm">
+          <div key={task.id} className="bg-white rounded-lg overflow-hidden shadow-sm flex flex-col">
             {task.imageUrl && (
               <div className="aspect-video w-full">
                 <img 
@@ -227,114 +227,93 @@ export default function BountyBoard() {
               </div>
             )}
             
-            <div className="p-6">
-              <div className="flex justify-between items-start mb-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-lg">
+            <div className="p-3 flex flex-col flex-grow">
+              {/* Header with title, category, and points */}
+              <div className="flex justify-between items-start mb-2">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start gap-2 mb-1">
+                    <span className="text-sm flex-shrink-0">
                       {getCategoryIcon(task.category || 'general')}
                     </span>
-                    <h3 className="text-lg font-semibold">{task.title}</h3>
-                    {task.location && (
-                      <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                        📍 {task.location}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-gray-600 mb-3">{task.description}</p>
-                  <div className="flex items-center gap-4 text-sm text-gray-500">
-                    <div className="flex items-center gap-2">
-                      {task.posterAvatar ? (
-                        <img 
-                          src={task.posterAvatar} 
-                          alt={task.posterName}
-                          className="w-5 h-5 rounded-full"
-                        />
-                      ) : (
-                        <div className="w-5 h-5 bg-gray-300 rounded-full"></div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-semibold text-sm line-clamp-2 leading-tight">{task.title}</h3>
+                      {task.location && (
+                        <span className="inline-block text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded mt-1">
+                          📍 {task.location}
+                        </span>
                       )}
-                      <span>Posted by {task.posterName}</span>
                     </div>
-                    {task.doerName && (
-                      <span>• Claimed by {task.doerName}</span>
-                    )}
                   </div>
                 </div>
-                <div className="text-right ml-4">
-                  <div className="text-2xl font-bold text-green-600 mb-1">
+                <div className="text-right ml-2 flex-shrink-0">
+                  <div className="text-base font-bold text-green-600">
                     {task.bounty} pts
                   </div>
-                  {task.bountyContributors && task.bountyContributors.length > 0 && (
-                    <div className="text-xs text-gray-500 mb-2">
-                      {task.bountyContributors.length} stacker{task.bountyContributors.length > 1 ? 's' : ''}
-                      {task.originalBounty && (
-                        <span> (+{task.bounty - task.originalBounty} stacked)</span>
-                      )}
-                    </div>
-                  )}
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(task.status)}`}>
+                  <span className={`px-1.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(task.status)}`}>
                     {task.status}
                   </span>
                 </div>
               </div>
 
-            {/* Bounty Stackers */}
-            {task.bountyContributors && task.bountyContributors.length > 0 && (
-              <div className="mb-4">
-                <p className="text-sm font-medium mb-2">Community Stackers:</p>
-                <div className="flex flex-wrap gap-2">
-                  {task.bountyContributors.map((contributor, index) => (
-                    <div key={index} className="flex items-center gap-1 bg-green-50 px-2 py-1 rounded text-xs">
-                      {contributor.userAvatar ? (
-                        <img 
-                          src={contributor.userAvatar} 
-                          alt={contributor.userName}
-                          className="w-4 h-4 rounded-full"
-                        />
-                      ) : (
-                        <div className="w-4 h-4 bg-green-300 rounded-full"></div>
-                      )}
-                      <span className="text-green-700">
-                        {contributor.userName} (+{contributor.amount} pts)
-                      </span>
-                    </div>
-                  ))}
+              {/* Stackers info - compact */}
+              {task.bountyContributors && task.bountyContributors.length > 0 && (
+                <div className="text-xs text-gray-500 mb-2">
+                  🔥 {task.bountyContributors.length} stacker{task.bountyContributors.length > 1 ? 's' : ''}
                 </div>
-              </div>
-            )}
+              )}
 
-            {task.proofUrl && (
-              <div className="mb-4">
-                <p className="text-sm font-medium mb-2">Proof of completion:</p>
-                <a 
-                  href={task.proofUrl} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline text-sm"
-                >
-                  View proof
-                </a>
-              </div>
-            )}
-
-            {task.proofImages && task.proofImages.length > 0 && (
-              <div className="mb-4">
-                <p className="text-sm font-medium mb-2">Proof images:</p>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                  {task.proofImages.map((imageUrl, index) => (
-                    <img
-                      key={index}
-                      src={imageUrl}
-                      alt={`Proof ${index + 1}`}
-                      className="w-full h-24 object-cover rounded-md cursor-pointer hover:opacity-90"
-                      onClick={() => window.open(imageUrl, '_blank')}
+              {/* Description */}
+              <p className="text-gray-600 text-sm line-clamp-2 mb-2 flex-grow">{task.description}</p>
+              
+              {/* Author info - compact */}
+              <div className="text-xs text-gray-500 mb-2">
+                <div className="flex items-center gap-1">
+                  {task.posterAvatar ? (
+                    <img 
+                      src={task.posterAvatar} 
+                      alt={task.posterName}
+                      className="w-3 h-3 rounded-full"
                     />
-                  ))}
+                  ) : (
+                    <div className="w-3 h-3 bg-gray-300 rounded-full"></div>
+                  )}
+                  <span>by {task.posterName}</span>
+                  {task.doerName && (
+                    <span className="ml-2">• claimed by {task.doerName}</span>
+                  )}
                 </div>
+              </div>
+
+            {/* Proof section - compact */}
+            {(task.proofUrl || (task.proofImages && task.proofImages.length > 0)) && (
+              <div className="mb-2">
+                {task.proofUrl && (
+                  <a 
+                    href={task.proofUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline text-xs block mb-1"
+                  >
+                    📄 View proof
+                  </a>
+                )}
+                {task.proofImages && task.proofImages.length > 0 && (
+                  <div className="grid grid-cols-3 gap-1">
+                    {task.proofImages.slice(0, 3).map((imageUrl, index) => (
+                      <img
+                        key={index}
+                        src={imageUrl}
+                        alt={`Proof ${index + 1}`}
+                        className="w-full h-16 object-cover rounded cursor-pointer hover:opacity-90"
+                        onClick={() => window.open(imageUrl, '_blank')}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5 mt-auto">
               {/* Stack Bounty - Only available for open tasks */}
               {task.status === 'open' && user && (
                 <BountyStackButton 
@@ -345,9 +324,9 @@ export default function BountyBoard() {
               {task.status === 'open' && user && task.posterId !== user.uid && (
                 <button
                   onClick={() => claimTask(task.id)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium"
+                  className="px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 text-xs font-medium"
                 >
-                  Claim Task
+                  Claim
                 </button>
               )}
               
@@ -360,9 +339,9 @@ export default function BountyBoard() {
               {task.status === 'completed' && user && task.posterId === user.uid && (
                 <button
                   onClick={() => validateTask(task.id)}
-                  className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 text-sm font-medium"
+                  className="px-3 py-1.5 bg-purple-600 text-white rounded hover:bg-purple-700 text-xs font-medium"
                 >
-                  Validate & Pay
+                  Validate
                 </button>
               )}
             </div>
@@ -401,36 +380,36 @@ function BountyStackButton({ onStack }: { onStack: (amount: number) => void }) {
     return (
       <button
         onClick={() => setIsOpen(true)}
-        className="px-3 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 text-sm font-medium flex items-center gap-1"
+        className="px-2 py-1.5 bg-orange-500 text-white rounded hover:bg-orange-600 text-xs font-medium flex items-center gap-1"
       >
-        📚 Stack Bounty
+        📚 Stack
       </button>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex gap-2 items-center">
+    <form onSubmit={handleSubmit} className="flex gap-1 items-center">
       <input
         type="number"
         value={stackAmount}
         onChange={(e) => setStackAmount(e.target.value)}
-        placeholder="Add pts"
+        placeholder="pts"
         min="1"
-        className="w-20 px-2 py-1 border rounded text-sm"
+        className="w-16 px-1.5 py-1 border rounded text-xs"
         required
         autoFocus
       />
       <button
         type="submit"
         disabled={isSubmitting}
-        className="px-3 py-1 bg-orange-500 text-white rounded text-sm hover:bg-orange-600 disabled:opacity-50"
+        className="px-2 py-1 bg-orange-500 text-white rounded text-xs hover:bg-orange-600 disabled:opacity-50"
       >
         {isSubmitting ? '...' : '+'}
       </button>
       <button
         type="button"
         onClick={() => { setIsOpen(false); setStackAmount(''); }}
-        className="px-2 py-1 text-gray-500 hover:text-gray-700 text-sm"
+        className="px-1 py-1 text-gray-500 hover:text-gray-700 text-xs"
       >
         ✕
       </button>
@@ -503,25 +482,25 @@ function ProofSubmissionForm({ onSubmit }: { onSubmit: (proofImages: string[], p
   };
 
   return (
-    <div className="w-full max-w-md">
-      <div className="flex gap-2 mb-3">
+    <div className="w-full">
+      <div className="flex gap-1 mb-2">
         <button
           type="button"
           onClick={() => setUseCamera(true)}
-          className={`px-3 py-1 rounded text-sm ${useCamera ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+          className={`px-2 py-1 rounded text-xs ${useCamera ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
         >
-          📷 Photos
+          📷
         </button>
         <button
           type="button"
           onClick={() => setUseCamera(false)}
-          className={`px-3 py-1 rounded text-sm ${!useCamera ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+          className={`px-2 py-1 rounded text-xs ${!useCamera ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
         >
-          🔗 URL
+          🔗
         </button>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-3">
+      <form onSubmit={handleSubmit} className="space-y-2">
         {useCamera ? (
           <div>
             <input
@@ -530,22 +509,22 @@ function ProofSubmissionForm({ onSubmit }: { onSubmit: (proofImages: string[], p
               capture="environment"
               multiple
               onChange={handleImageChange}
-              className="w-full px-3 py-2 border rounded-md text-sm"
+              className="w-full px-2 py-1.5 border rounded text-xs"
             />
             
             {imagePreviews.length > 0 && (
-              <div className="grid grid-cols-2 gap-2 mt-2">
+              <div className="grid grid-cols-2 gap-1 mt-1">
                 {imagePreviews.map((preview, index) => (
                   <div key={index} className="relative">
                     <img 
                       src={preview} 
                       alt={`Proof ${index + 1}`}
-                      className="w-full h-24 object-cover rounded border"
+                      className="w-full h-16 object-cover rounded border"
                     />
                     <button
                       type="button"
                       onClick={() => removeImage(index)}
-                      className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"
+                      className="absolute top-0.5 right-0.5 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-xs hover:bg-red-600"
                     >
                       ✕
                     </button>
@@ -559,17 +538,17 @@ function ProofSubmissionForm({ onSubmit }: { onSubmit: (proofImages: string[], p
             type="url"
             value={proofUrl}
             onChange={(e) => setProofUrl(e.target.value)}
-            placeholder="Proof URL (image, document, etc.)"
-            className="w-full px-3 py-2 border rounded-md text-sm"
+            placeholder="Proof URL"
+            className="w-full px-2 py-1.5 border rounded text-xs"
           />
         )}
 
         <button
           type="submit"
           disabled={isSubmitting || (selectedImages.length === 0 && !proofUrl.trim())}
-          className="w-full px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full px-3 py-1.5 bg-green-600 text-white rounded hover:bg-green-700 text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {isSubmitting ? 'Uploading...' : 'Mark Complete'}
+          {isSubmitting ? '...' : 'Complete'}
         </button>
       </form>
     </div>

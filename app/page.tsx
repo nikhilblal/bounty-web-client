@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from './context/AuthContext';
 import BountyBoard from './components/BountyBoard';
-import CreateTaskForm from './components/CreateTaskForm';
 import UserDashboard from './components/UserDashboard';
 import Leaderboard from './components/Leaderboard';
 
@@ -100,10 +99,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       {activeView === 'board' ? (
-        <div>
-          <CreateTaskForm onTaskCreated={handleTaskCreated} />
-          <BountyBoard key={refreshTrigger} />
-        </div>
+        <BountyBoard key={refreshTrigger} />
       ) : activeView === 'dashboard' ? (
         <UserDashboard />
       ) : (
