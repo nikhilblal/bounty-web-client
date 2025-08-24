@@ -84,14 +84,15 @@ export default function Navbar() {
       console.log('✅ Sign in successful:', result?.user?.displayName);
     } catch (error) {
       console.error('❌ Sign in failed:', error);
-      console.error('Error code:', (error as any)?.code);
-      console.error('Error message:', (error as any)?.message);
+      const firebaseError = error as { code?: string; message?: string };
+      console.error('Error code:', firebaseError?.code);
+      console.error('Error message:', firebaseError?.message);
       
       // Show user-friendly error
-      if ((error as any)?.code === 'auth/unauthorized-domain') {
+      if (firebaseError?.code === 'auth/unauthorized-domain') {
         alert('This domain is not authorized. Please check Firebase Auth settings.');
       } else {
-        alert(`Sign in failed: ${(error as any)?.message || 'Unknown error'}`);
+        alert(`Sign in failed: ${firebaseError?.message || 'Unknown error'}`);
       }
     }
   };
@@ -310,6 +311,8 @@ export default function Navbar() {
                 onTaskCreated={() => {
                   setShowCreateForm(false);
                   fetchUserStats();
+                  // Trigger page refresh by updating a global indicator
+                  window.dispatchEvent(new CustomEvent('taskCreated'));
                 }} 
               />
             </div>
