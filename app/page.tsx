@@ -20,14 +20,20 @@ export default function Home() {
       }
     };
 
+    // Listen for task creation events
+    const handleTaskCreated = () => {
+      setRefreshTrigger(prev => prev + 1);
+    };
+
     // Poll for changes (simple approach)
     const interval = setInterval(handleNavChange, 100);
-    return () => clearInterval(interval);
+    window.addEventListener('taskCreated', handleTaskCreated);
+    
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('taskCreated', handleTaskCreated);
+    };
   }, []);
-
-  const handleTaskCreated = () => {
-    setRefreshTrigger(prev => prev + 1);
-  };
 
   if (loading) {
     return (
