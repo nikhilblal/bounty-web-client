@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { db, getDocs, collection, query, where } from '../../firebase';
 import { useAuth } from '../context/AuthContext';
 
@@ -20,7 +20,7 @@ interface Task {
   location?: string;
   category?: string;
   imageUrl?: string;
-  createdAt: any;
+  createdAt: unknown;
 }
 
 interface UserStats {
@@ -50,13 +50,7 @@ export default function UserDashboard() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'posted' | 'claimed' | 'completed'>('overview');
 
-  useEffect(() => {
-    if (user) {
-      fetchUserData();
-    }
-  }, [user]);
-
-  const fetchUserData = async () => {
+  const fetchUserData = useCallback(async () => {
     if (!user) return;
 
     try {
@@ -105,7 +99,13 @@ export default function UserDashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      fetchUserData();
+    }
+  }, [user, fetchUserData]);
 
   if (!user) {
     return (

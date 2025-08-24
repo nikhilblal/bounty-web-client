@@ -21,7 +21,7 @@ interface Task {
     userName: string;
     userAvatar?: string;
     amount: number;
-    timestamp: any;
+    timestamp: unknown;
   }>;
   status: 'open' | 'claimed' | 'completed' | 'validated';
   proofUrl?: string;
@@ -29,7 +29,7 @@ interface Task {
   location?: string;
   category?: string;
   imageUrl?: string;
-  createdAt: any;
+  createdAt: unknown;
 }
 
 export default function BountyBoard() {
@@ -76,7 +76,7 @@ export default function BountyBoard() {
   const markCompleted = async (taskId: string, proofUrl: string, proofImages?: string[]) => {
     if (!user) return;
     try {
-      const updateData: any = {
+      const updateData: Record<string, unknown> = {
         status: 'completed'
       };
       
@@ -474,7 +474,7 @@ function ProofSubmissionForm({ onSubmit }: { onSubmit: (proofImages: string[], p
     
     setIsSubmitting(true);
     try {
-      let uploadedImageUrls: string[] = [];
+      const uploadedImageUrls: string[] = [];
       
       if (selectedImages.length > 0) {
         // Import Firebase storage functions

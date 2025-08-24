@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { signIn, logOut, db, getDocs, collection } from '../../firebase';
 import { useAuth } from '../context/AuthContext';
 
@@ -15,13 +15,7 @@ export default function Navbar() {
   const [activeTab, setActiveTab] = useState<'board' | 'dashboard' | 'leaderboard'>('board');
   const [userStats, setUserStats] = useState<UserStats>({ pointsEarned: 0, pointsStacked: 0, totalContribution: 0 });
 
-  useEffect(() => {
-    if (user) {
-      fetchUserStats();
-    }
-  }, [user]);
-
-  const fetchUserStats = async () => {
+  const fetchUserStats = useCallback(async () => {
     if (!user) return;
 
     try {
@@ -34,15 +28,24 @@ export default function Navbar() {
       let pointsEarned = 0;
       let pointsStacked = 0;
 
-      tasks.forEach((task: any) => {
+      tasks.forEach((task) => {
+        const typedTask = task as {
+          status?: string;
+          doerId?: string;
+          bounty?: number;
+          bountyContributors?: Array<{
+            userId: string;
+            amount: number;
+          }>;
+        };
         // Count points earned from completed tasks
-        if (task.status === 'validated' && task.doerId === user.uid) {
-          pointsEarned += task.bounty || 0;
+        if (typedTask.status === 'validated' && typedTask.doerId === user.uid) {
+          pointsEarned += typedTask.bounty || 0;
         }
 
         // Count points stacked by user
-        if (task.bountyContributors) {
-          task.bountyContributors.forEach((contributor: any) => {
+        if (typedTask.bountyContributors) {
+          typedTask.bountyContributors.forEach((contributor) => {
             if (contributor.userId === user.uid) {
               pointsStacked += contributor.amount || 0;
             }
@@ -58,7 +61,13 @@ export default function Navbar() {
     } catch (error) {
       console.error('Error fetching user stats:', error);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      fetchUserStats();
+    }
+  }, [user, fetchUserStats]);
 
   const handleSignIn = async () => {
     try {
