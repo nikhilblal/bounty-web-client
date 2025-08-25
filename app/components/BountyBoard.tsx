@@ -38,6 +38,7 @@ export default function BountyBoard() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'open' | 'claimed' | 'completed'>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [expandedTask, setExpandedTask] = useState<string | null>(null);
 
   useEffect(() => {
     fetchTasks();
@@ -144,6 +145,10 @@ export default function BountyBoard() {
     return statusMatch && categoryMatch;
   });
 
+  const handleTaskClick = (taskId: string) => {
+    setExpandedTask(expandedTask === taskId ? null : taskId);
+  };
+
   const getCategoryIcon = (category: string) => {
     switch (category) {
       case 'design': return '🎨';
@@ -169,6 +174,32 @@ export default function BountyBoard() {
 
   if (loading) {
     return <div className="text-center py-8">Loading bounties...</div>;
+  }
+
+  // Show expanded task if one is selected
+  if (expandedTask) {
+    const task = filteredTasks.find(t => t.id === expandedTask);
+    if (!task) {
+      setExpandedTask(null);
+      return null;
+    }
+    
+    return (
+      <div className="max-w-4xl mx-auto p-6">
+        <div className="mb-4">
+          <button
+            onClick={() => setExpandedTask(null)}
+            className="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium"
+          >
+            ← Back to Board
+          </button>
+        </div>
+        
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <ExpandedTaskView task={task} user={user} onAction={() => fetchTasks()} />
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -216,7 +247,11 @@ export default function BountyBoard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
         {filteredTasks.map(task => (
-          <div key={task.id} className="bg-white rounded-lg overflow-hidden shadow-sm flex flex-col">
+          <div 
+            key={task.id} 
+            className="bg-white rounded-lg overflow-hidden shadow-sm flex flex-col cursor-pointer hover:shadow-md transition-shadow"
+            onClick={() => handleTaskClick(task.id)}
+          >
             {task.imageUrl && (
               <div className="aspect-video w-full">
                 <img 
@@ -305,7 +340,7 @@ export default function BountyBoard() {
                         src={imageUrl}
                         alt={`Proof ${index + 1}`}
                         className="w-full h-16 object-cover rounded cursor-pointer hover:opacity-90"
-                        onClick={() => window.open(imageUrl, '_blank')}
+                        onClick={(e) => { e.stopPropagation(); window.open(imageUrl, '_blank'); }}
                       />
                     ))}
                   </div>
@@ -313,7 +348,7 @@ export default function BountyBoard() {
               </div>
             )}
 
-            <div className="flex flex-wrap gap-1.5 mt-auto">
+            <div className="flex flex-wrap gap-1.5 mt-auto" onClick={(e) => e.stopPropagation()}>
               {/* Stack Bounty - Only available for open tasks */}
               {task.status === 'open' && user && (
                 <BountyStackButton 
@@ -323,7 +358,7 @@ export default function BountyBoard() {
 
               {task.status === 'open' && user && task.posterId !== user.uid && (
                 <button
-                  onClick={() => claimTask(task.id)}
+                  onClick={(e) => { e.stopPropagation(); claimTask(task.id); }}
                   className="px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 text-xs font-medium"
                 >
                   Claim
@@ -338,7 +373,7 @@ export default function BountyBoard() {
 
               {task.status === 'completed' && user && task.posterId === user.uid && (
                 <button
-                  onClick={() => validateTask(task.id)}
+                  onClick={(e) => { e.stopPropagation(); validateTask(task.id); }}
                   className="px-3 py-1.5 bg-purple-600 text-white rounded hover:bg-purple-700 text-xs font-medium"
                 >
                   Validate
@@ -551,6 +586,285 @@ function ProofSubmissionForm({ onSubmit }: { onSubmit: (proofImages: string[], p
           {isSubmitting ? '...' : 'Complete'}
         </button>
       </form>
+    </div>
+  );
+}
+
+function ExpandedTaskView({ task, user, onAction }: { 
+  task: Task; 
+  user: ReturnType<typeof useAuth>['user']; 
+  onAction: () => void;
+}) {
+  const [isSubmittingClaim, setIsSubmittingClaim] = useState(false);
+  const [isSubmittingValidate, setIsSubmittingValidate] = useState(false);
+
+  const claimTask = async () => {
+    if (!user) return;
+    setIsSubmittingClaim(true);
+    try {
+      await updateDoc(doc(db, 'tasks', task.id), {
+        doerId: user.uid,
+        doerName: user.displayName,
+        status: 'claimed'
+      });
+      onAction();
+    } catch (error) {
+      console.error('Error claiming task:', error);
+    } finally {
+      setIsSubmittingClaim(false);
+    }
+  };
+
+  const validateTask = async () => {
+    if (!user) return;
+    setIsSubmittingValidate(true);
+    try {
+      await updateDoc(doc(db, 'tasks', task.id), {
+        validatorId: user.uid,
+        status: 'validated'
+      });
+      onAction();
+    } catch (error) {
+      console.error('Error validating task:', error);
+    } finally {
+      setIsSubmittingValidate(false);
+    }
+  };
+
+  const boostBounty = async (boostAmount: number) => {
+    if (!user || boostAmount <= 0) return;
+    
+    try {
+      const newBountyContributor = {
+        userId: user.uid,
+        userName: user.displayName || 'Anonymous',
+        userAvatar: user.photoURL,
+        amount: boostAmount,
+        timestamp: new Date()
+      };
+
+      const updatedContributors = [...(task.bountyContributors || []), newBountyContributor];
+      const newTotalBounty = task.bounty + boostAmount;
+
+      await updateDoc(doc(db, 'tasks', task.id), {
+        bounty: newTotalBounty,
+        bountyContributors: updatedContributors,
+        originalBounty: task.originalBounty || task.bounty
+      });
+      
+      onAction();
+    } catch (error) {
+      console.error('Error boosting bounty:', error);
+    }
+  };
+
+  const markCompleted = async (proofImages: string[], proofUrl?: string) => {
+    if (!user) return;
+    try {
+      const updateData: Record<string, unknown> = {
+        status: 'completed'
+      };
+      
+      if (proofImages && proofImages.length > 0) {
+        updateData.proofImages = proofImages;
+      }
+      
+      if (proofUrl) {
+        updateData.proofUrl = proofUrl;
+      }
+
+      await updateDoc(doc(db, 'tasks', task.id), updateData);
+      onAction();
+    } catch (error) {
+      console.error('Error marking task as completed:', error);
+    }
+  };
+
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case 'design': return '🎨';
+      case 'development': return '💻';
+      case 'writing': return '✍️';
+      case 'research': return '🔍';
+      case 'marketing': return '📢';
+      case 'data-entry': return '📊';
+      case 'physical': return '🏃';
+      default: return '📝';
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'open': return 'bg-green-100 text-green-800';
+      case 'claimed': return 'bg-yellow-100 text-yellow-800';
+      case 'completed': return 'bg-blue-100 text-blue-800';
+      case 'validated': return 'bg-purple-100 text-purple-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Task Image */}
+      {task.imageUrl && (
+        <div className="aspect-video w-full max-w-2xl mx-auto">
+          <img 
+            src={task.imageUrl} 
+            alt={task.title}
+            className="w-full h-full object-cover rounded-lg"
+          />
+        </div>
+      )}
+
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
+        <div className="flex-1">
+          <div className="flex items-center gap-3 mb-2">
+            <span className="text-2xl">
+              {getCategoryIcon(task.category || 'general')}
+            </span>
+            <h1 className="text-2xl md:text-3xl font-bold">{task.title}</h1>
+          </div>
+          
+          {task.location && (
+            <div className="flex items-center gap-1 text-gray-600 mb-3">
+              <span>📍</span>
+              <span>{task.location}</span>
+            </div>
+          )}
+        </div>
+        
+        <div className="flex flex-col items-end gap-2">
+          <div className="text-3xl font-bold text-green-600">
+            {task.bounty} pts
+          </div>
+          <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(task.status)}`}>
+            {task.status}
+          </span>
+        </div>
+      </div>
+
+      {/* Description */}
+      <div className="prose max-w-none">
+        <h3 className="text-lg font-semibold mb-2">Description</h3>
+        <p className="text-gray-700 whitespace-pre-wrap">{task.description}</p>
+      </div>
+
+      {/* Author Info */}
+      <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
+        {task.posterAvatar ? (
+          <img 
+            src={task.posterAvatar} 
+            alt={task.posterName}
+            className="w-10 h-10 rounded-full"
+          />
+        ) : (
+          <div className="w-10 h-10 bg-gray-300 rounded-full"></div>
+        )}
+        <div>
+          <p className="font-medium">Posted by {task.posterName}</p>
+          {task.doerName && (
+            <p className="text-sm text-gray-600">Claimed by {task.doerName}</p>
+          )}
+        </div>
+      </div>
+
+      {/* Community Stackers */}
+      {task.bountyContributors && task.bountyContributors.length > 0 && (
+        <div>
+          <h3 className="text-lg font-semibold mb-3">Community Stackers ({task.bountyContributors.length})</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {task.bountyContributors.map((contributor, index) => (
+              <div key={index} className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
+                {contributor.userAvatar ? (
+                  <img 
+                    src={contributor.userAvatar} 
+                    alt={contributor.userName}
+                    className="w-8 h-8 rounded-full"
+                  />
+                ) : (
+                  <div className="w-8 h-8 bg-green-300 rounded-full"></div>
+                )}
+                <div>
+                  <p className="font-medium text-green-800">{contributor.userName}</p>
+                  <p className="text-sm text-green-600">+{contributor.amount} pts</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Proof Section */}
+      {(task.proofUrl || (task.proofImages && task.proofImages.length > 0)) && (
+        <div>
+          <h3 className="text-lg font-semibold mb-3">Proof of Completion</h3>
+          {task.proofUrl && (
+            <div className="mb-4">
+              <a 
+                href={task.proofUrl} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 text-blue-600 hover:underline"
+              >
+                🔗 View proof document
+              </a>
+            </div>
+          )}
+          {task.proofImages && task.proofImages.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              {task.proofImages.map((imageUrl, index) => (
+                <img
+                  key={index}
+                  src={imageUrl}
+                  alt={`Proof ${index + 1}`}
+                  className="w-full h-48 object-cover rounded-lg cursor-pointer hover:opacity-90"
+                  onClick={() => window.open(imageUrl, '_blank')}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Actions */}
+      {user && (
+        <div className="flex flex-wrap gap-3 pt-4 border-t border-gray-200">
+          {/* Stack Bounty */}
+          {task.status === 'open' && (
+            <BountyStackButton onStack={boostBounty} />
+          )}
+
+          {/* Claim Task */}
+          {task.status === 'open' && task.posterId !== user.uid && (
+            <button
+              onClick={claimTask}
+              disabled={isSubmittingClaim}
+              className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium disabled:opacity-50"
+            >
+              {isSubmittingClaim ? 'Claiming...' : 'Claim Task'}
+            </button>
+          )}
+          
+          {/* Submit Proof */}
+          {task.status === 'claimed' && task.doerId === user.uid && (
+            <div className="w-full max-w-md">
+              <ProofSubmissionForm onSubmit={markCompleted} />
+            </div>
+          )}
+
+          {/* Validate Task */}
+          {task.status === 'completed' && task.posterId === user.uid && (
+            <button
+              onClick={validateTask}
+              disabled={isSubmittingValidate}
+              className="px-6 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 font-medium disabled:opacity-50"
+            >
+              {isSubmittingValidate ? 'Validating...' : 'Validate & Pay'}
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
