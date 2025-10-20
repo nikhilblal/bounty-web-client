@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { db, getDocs, collection, query, orderBy, updateDoc, doc } from '../../firebase';
+import { db, getDocs, collection, query, orderBy, updateDoc, doc, deleteDoc } from '../../firebase';
 import { useAuth } from '../context/AuthContext';
 
 interface Task {
@@ -106,6 +106,28 @@ export default function BountyBoard() {
       fetchTasks();
     } catch (error) {
       console.error('Error validating task:', error);
+    }
+  };
+
+  const deleteTask = async (taskId: string) => {
+    if (!user) return;
+
+    const task = tasks.find(t => t.id === taskId);
+    if (!task || task.posterId !== user.uid) {
+      alert('You can only delete your own posts');
+      return;
+    }
+
+    if (!confirm('Are you sure you want to delete this task? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      await deleteDoc(doc(db, 'tasks', taskId));
+      fetchTasks();
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      alert('Error deleting task. Please try again.');
     }
   };
 
@@ -861,6 +883,16 @@ function ExpandedTaskView({ task, user, onAction }: {
               className="px-6 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 font-medium disabled:opacity-50"
             >
               {isSubmittingValidate ? 'Validating...' : 'Validate & Pay'}
+            </button>
+          )}
+
+          {/* Delete Task - Only for post creator on open or claimed tasks */}
+          {task.posterId === user.uid && (task.status === 'open' || task.status === 'claimed') && (
+            <button
+              onClick={() => deleteTask(task.id)}
+              className="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 font-medium"
+            >
+              Delete Task
             </button>
           )}
         </div>

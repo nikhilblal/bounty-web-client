@@ -1,7 +1,7 @@
 // firebase.js
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
-import { getFirestore, collection, addDoc, getDocs, query, where, updateDoc, doc, orderBy, serverTimestamp } from "firebase/firestore";
+import { getFirestore, collection, addDoc, getDocs, query, where, updateDoc, doc, orderBy, serverTimestamp, deleteDoc } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 const firebaseConfig = {
@@ -25,7 +25,7 @@ export const signIn = () => signInWithPopup(auth, provider);
 export const logOut = () => signOut(auth);
 
 // Firestore helpers
-export { collection, addDoc, getDocs, query, where, updateDoc, doc, orderBy, serverTimestamp };
+export { collection, addDoc, getDocs, query, where, updateDoc, doc, orderBy, serverTimestamp, deleteDoc };
 
 // Storage helpers
 export { ref, uploadBytes, getDownloadURL };

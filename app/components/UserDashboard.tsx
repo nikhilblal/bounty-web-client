@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { db, getDocs, collection, query, where } from '../../firebase';
+import { db, getDocs, collection, query, where, deleteDoc, doc } from '../../firebase';
 import { useAuth } from '../context/AuthContext';
 
 interface Task {
@@ -107,6 +107,22 @@ export default function UserDashboard() {
     }
   }, [user, fetchUserData]);
 
+  const deleteTask = async (taskId: string) => {
+    if (!user) return;
+
+    if (!confirm('Are you sure you want to delete this task? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      await deleteDoc(doc(db, 'tasks', taskId));
+      fetchUserData(); // Refresh the data
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      alert('Error deleting task. Please try again.');
+    }
+  };
+
   if (!user) {
     return (
       <div className="text-center py-8 text-gray-500">
@@ -186,14 +202,24 @@ export default function UserDashboard() {
             </div>
             
             {task.proofUrl && (
-              <a 
-                href={task.proofUrl} 
-                target="_blank" 
+              <a
+                href={task.proofUrl}
+                target="_blank"
                 rel="noopener noreferrer"
                 className="text-blue-600 hover:underline text-sm"
               >
                 View proof
               </a>
+            )}
+
+            {/* Delete button for posted tasks that are open or claimed */}
+            {task.posterId === user?.uid && (task.status === 'open' || task.status === 'claimed') && (
+              <button
+                onClick={() => deleteTask(task.id)}
+                className="mt-3 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm font-medium"
+              >
+                Delete Task
+              </button>
             )}
           </div>
         </div>

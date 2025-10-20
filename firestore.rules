@@ -1,0 +1,61 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper function to check if user owns the resource
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    // Tasks collection rules
+    match /tasks/{taskId} {
+      // Anyone can read tasks (needed for public bounty board)
+      allow read: if true;
+
+      // Only authenticated users can create tasks
+      allow create: if isAuthenticated() &&
+        request.resource.data.posterId == request.auth.uid &&
+        request.resource.data.posterName == request.auth.token.name &&
+        request.resource.data.status == 'open';
+
+      // Allow updates if user is:
+      // 1. Task poster (can update/delete task)
+      // 2. Task doer (can claim task, submit proof)
+      // 3. Task validator (can validate completion)
+      // 4. Any authenticated user (can boost bounty)
+      allow update: if isAuthenticated() && (
+        // Poster can update their own tasks
+        isOwner(resource.data.posterId) ||
+
+        // Doer can claim task and submit proof
+        (request.resource.data.doerId == request.auth.uid &&
+         resource.data.status == 'open') ||
+
+        // Existing doer can update proof
+        isOwner(resource.data.doerId) ||
+
+        // Validator can validate tasks
+        (request.resource.data.validatorId == request.auth.uid &&
+         resource.data.status == 'completed') ||
+
+        // Anyone can boost bounty (add to bountyContributors array)
+        (request.resource.data.bountyContributors != null &&
+         request.resource.data.bountyContributors.size() > resource.data.get('bountyContributors', []).size())
+      );
+
+      // Only task poster can delete their tasks
+      allow delete: if isOwner(resource.data.posterId);
+    }
+
+    // Deny all other collections by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
